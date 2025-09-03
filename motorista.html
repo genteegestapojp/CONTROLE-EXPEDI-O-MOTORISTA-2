@@ -15,14 +15,23 @@
             --primary: #00D4AA; --secondary: #00B4D8; --accent: #0077B6;
             --dark: #023047; --light: #90E0EF;
             --primary-gradient: linear-gradient(135deg, #00D4AA 0%, #00B4D8 50%, #0077B6 100%);
+            --accent-gradient: linear-gradient(135deg, #0077B6 0%, #023047 100%);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--primary-gradient); min-height: 100vh; padding: 10px; }
-        .container { max-width: 800px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: var(--accent); color: white; padding: 20px; text-align: center; }
+        body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--primary-gradient); min-height: 100vh; padding: 10px; text-align: center; }
+        .container { max-width: 800px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; text-align: left;}
+        .header { background: var(--accent-gradient); color: white; padding: 20px; text-align: center; }
         .header h1 { font-size: 1.8rem; }
         .connection-status { background: var(--primary); color: white; padding: 8px; text-align: center; font-weight: 600; font-size: 0.9rem; }
         .connection-status.error { background: #D62828; }
+        .filial-indicator { background: var(--accent-gradient); color: white; padding: 12px 20px; text-align: center; font-weight: 700; font-size: 1rem; display: none; }
+        .filial-indicator.active { display: block; }
+        .filial-selection { padding: 40px 20px; text-align: center; min-height: 400px; display: flex; flex-direction: column; justify-content: center; }
+        .filial-selection h2 { color: var(--dark); font-size: 2rem; margin-bottom: 20px; }
+        .filiais-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 800px; margin: 0 auto; }
+        .filial-card { background: white; border: 2px solid rgba(0, 212, 170, 0.3); border-radius: 16px; padding: 30px; cursor: pointer; transition: all 0.3s ease; text-align: center; }
+        .filial-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 12px 30px rgba(0, 212, 170, 0.3); }
+        .filial-card h3 { color: var(--dark); font-size: 1.4rem; }
         .tab-content.active { display: block; padding: 20px; }
         .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
         .form-group label { margin-bottom: 5px; font-weight: 600; color: var(--dark); }
@@ -30,7 +39,8 @@
         .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.3s ease; width: 100%; }
         .btn-primary { background: var(--primary-gradient); color: white; }
         .btn-success { background: linear-gradient(135deg, #00D4AA, #00B4D8); color: white; }
-        .btn-danger { background: #D62828; color: white; }
+        .btn-danger { background: linear-gradient(135deg, #D62828, #F77F00); color: white; }
+        .btn-small { padding: 8px 12px; font-size: 0.85rem; width: auto; }
         .btn:hover { transform: translateY(-2px); }
         .transport-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .transport-card h3 { color: var(--dark); margin-bottom: 15px; }
@@ -57,6 +67,10 @@
         .feature-icon.dock::before { content: "⚓"; }
         .feature-icon.user::before { content: "👤"; }
         .feature-icon.clock::before { content: "⏰"; }
+        .feature-icon.building::before { content: "🏢"; }
+        .loading { text-align: center; padding: 40px 20px; color: var(--secondary); }
+        .spinner { border: 3px solid rgba(0, 212, 170, 0.1); border-top: 3px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .notification { position: fixed; top: 10px; right: 10px; left: 10px; padding: 12px 16px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; font-weight: 600; color: white; font-size: 0.9rem; text-align: center; animation: slideInTop 0.4s ease; }
         .notification.error { background: linear-gradient(135deg, #D62828, #F77F00); }
         .notification.success { background: linear-gradient(135deg, #00D4AA, #00B4D8); }
@@ -75,23 +89,41 @@
             Conectando...
         </div>
 
+        <div id="filialIndicator" class="filial-indicator">
+            <span class="feature-icon building"></span>
+            <span id="filialNome">Nenhuma filial selecionada</span>
+        </div>
+
         <div class="header">
             <h1>Painel do Motorista</h1>
             <p>Consulte suas viagens e gerencie as entregas</p>
         </div>
 
-        <div id="mainSystem">
+        <div id="filialSelection" class="filial-selection">
+            <h2>Selecione a Filial</h2>
+            <div id="filiaisGrid" class="filiais-grid">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Carregando filiais...
+                </div>
+            </div>
+        </div>
+
+        <div id="mainSystem" style="display: none;">
+             <div style="padding: 10px 20px; text-align: center;">
+                <button class="btn btn-danger btn-small" onclick="trocarFilial()">Trocar Filial</button>
+            </div>
             <div id="motoristas" class="tab-content active">
                 <div id="consultaViagens" class="sub-tab-content active">
                     <div class="transport-card" style="max-width: 600px; margin: 20px auto;">
                         <h3 style="color: var(--dark); margin-bottom: 20px; font-size: 1.4rem;">Consultar Expedições por Placa</h3>
-                        <p style="color: #666; margin-bottom: 25px;">Insira a placa do seu veículo para visualizar suas atividades</p>
+                        <p style="color: #666; margin-bottom: 25px;">Selecione a placa do seu veículo para ver suas atividades.</p>
 
                         <div style="display: flex; gap: 15px; justify-content: center; align-items: end; flex-wrap: wrap;">
                             <div class="form-group" style="flex-grow: 1; min-width: 200px; margin-bottom: 0;">
-                                <label for="placaMotorista" style="text-align: left;">Selecione a Placa do Veículo:</label>
+                                <label for="placaMotorista" style="text-align: left;">Placa do Veículo:</label>
                                 <select id="placaMotorista">
-                                    <option value="">Carregando veículos...</option>
+                                    <option value="">Carregando...</option>
                                 </select>
                             </div>
                             <button class="btn btn-primary" onclick="consultarExpedicoesPorPlaca()" style="height: 54px;">
@@ -107,7 +139,7 @@
                     <div id="semResultados" style="display: none;">
                         <div class="alert alert-warning">
                             <h4>Nenhuma Expedição Encontrada</h4>
-                            <p>Não foram encontradas expedições ativas para a placa informada.</p>
+                            <p>Não foram encontradas expedições ativas para a placa informada nesta filial.</p>
                         </div>
                     </div>
                 </div>
@@ -142,16 +174,33 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93c293ZXFxdHRjbXV1YW9oeGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMjQ5OTAsImV4cCI6MjA3MTgwMDk5MH0.Iee27SUOIkhMFvgDWXrW3C38DUuMr0MyVtR-NjF6FRk';
         const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
 
-        let lojas = [], docas = [], veiculos = [], motoristas = [];
+        let filiais = [], lojas = [], docas = [], veiculos = [], motoristas = [];
+        let selectedFilial = null;
         let activeTimers = {};
         let html5QrCodeScanner = null;
         let scannerIsRunning = false;
         let modalState = {};
 
-        async function supabaseRequest(endpoint, method = 'GET', data = null) {
-            const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+        async function supabaseRequest(endpoint, method = 'GET', data = null, includeFilialFilter = true) {
+            let url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+            
+            if (includeFilialFilter && selectedFilial && method.toUpperCase() === 'GET') {
+                const separator = url.includes('?') ? '&' : '?';
+                url += `${separator}filial=eq.${selectedFilial.nome}`;
+            }
+
             const options = { method, headers };
-            if (data) options.body = JSON.stringify(data);
+            if (data) {
+                 if (includeFilialFilter && selectedFilial && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PATCH')) {
+                    if (Array.isArray(data)) {
+                        data = data.map(item => ({ ...item, filial: selectedFilial.nome }));
+                    } else {
+                        data = { ...data, filial: selectedFilial.nome };
+                    }
+                }
+                options.body = JSON.stringify(data);
+            }
+
             try {
                 const response = await fetch(url, options);
                 if (!response.ok) {
@@ -171,10 +220,8 @@
         }
         
         function showNotification(message, type = 'success') {
-            // Remove qualquer notificação existente
             const existingNotification = document.querySelector('.notification');
             if(existingNotification) existingNotification.remove();
-
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
             notification.innerHTML = message;
@@ -184,23 +231,60 @@
             }, 4000);
         }
 
-        // --- INICIALIZAÇÃO ---
+        // --- INICIALIZAÇÃO E CONTROLE DE FILIAL ---
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await checkConnection();
-                await loadInitialData();
+                await loadFiliais();
             } catch (error) {
                 console.error("Falha na inicialização:", error);
             }
         });
 
         async function checkConnection() {
-            await supabaseRequest('veiculos?select=placa&limit=1');
+            await supabaseRequest('filiais?select=nome&limit=1', 'GET', null, false);
             document.getElementById('connectionStatus').textContent = 'Conectado com Sucesso';
             document.getElementById('connectionStatus').classList.remove('error');
         }
 
+        async function loadFiliais() {
+            try {
+                const filiaisData = await supabaseRequest('filiais?select=nome,descricao&ativo=eq.true&order=nome', 'GET', null, false);
+                filiais = filiaisData || [];
+                const grid = document.getElementById('filiaisGrid');
+                grid.innerHTML = '';
+                filiais.forEach(filial => {
+                    const card = document.createElement('div');
+                    card.className = 'filial-card';
+                    card.onclick = () => selectFilial(filial);
+                    card.innerHTML = `<h3>${filial.nome}</h3><p>${filial.descricao || 'Acessar filial'}</p>`;
+                    grid.appendChild(card);
+                });
+            } catch(e) {
+                document.getElementById('filiaisGrid').innerHTML = '<div class="alert alert-warning">Erro ao carregar filiais.</div>';
+            }
+        }
+
+        async function selectFilial(filial) {
+            selectedFilial = filial;
+            document.getElementById('filialNome').textContent = filial.nome;
+            document.getElementById('filialIndicator').classList.add('active');
+            document.getElementById('filialSelection').style.display = 'none';
+            document.getElementById('mainSystem').style.display = 'block';
+            await loadInitialData();
+        }
+
+        function trocarFilial() {
+            selectedFilial = null;
+            document.getElementById('filialIndicator').classList.remove('active');
+            document.getElementById('mainSystem').style.display = 'none';
+            document.getElementById('filialSelection').style.display = 'block';
+            document.getElementById('resultadosMotorista').style.display = 'none';
+            document.getElementById('semResultados').style.display = 'none';
+        }
+
         async function loadInitialData() {
+            if (!selectedFilial) return;
             try {
                 [lojas, docas, veiculos, motoristas] = await Promise.all([
                     supabaseRequest('lojas?select=id,nome,codigo,codlojaqr&ativo=eq.true&order=nome'),
@@ -210,7 +294,7 @@
                 ]);
                 populateSelects();
             } catch (error) {
-                showNotification("Erro ao carregar dados iniciais.", "error");
+                showNotification("Erro ao carregar dados da filial.", "error");
             }
         }
 
@@ -292,7 +376,7 @@
                 } else {
                     const criadaEm = new Date(exp.data_hora);
                     const tempoEsperaTexto = minutesToHHMM((new Date() - criadaEm) / 60000);
-                    let proximaAcao = '', corStatus = '', actionButton = '';
+                    let proximaAcao = '', actionButton = '';
 
                     if (exp.status === 'aguardando_veiculo') {
                         proximaAcao = 'Dirija-se à doca para iniciar o carregamento';
@@ -336,7 +420,7 @@
                 const loja = lojas.find(l => l.id === item.loja_id);
                 if (!loja) return;
                 
-                let statusDescargaLabel = '', statusColor = '', actionButton = '';
+                let statusDescargaLabel = '', actionButton = '';
                 let timerHtml = '';
 
                 if (item.status_descarga === 'em_descarga' && item.data_inicio_descarga) {
@@ -345,7 +429,8 @@
                     const startTime = new Date(item.data_inicio_descarga).getTime();
                     if(activeTimers[timerId]) clearInterval(activeTimers[timerId]);
                     activeTimers[timerId] = setInterval(() => {
-                        document.getElementById(timerId).innerHTML = `<strong>Tempo em Loja:</strong> ${minutesToHHMM((new Date().getTime() - startTime) / 60000)}`;
+                        const timerEl = document.getElementById(timerId);
+                        if(timerEl) timerEl.innerHTML = `<strong>Tempo em Loja:</strong> ${minutesToHHMM((new Date().getTime() - startTime) / 60000)}`;
                     }, 1000);
                 }
                 
@@ -365,7 +450,7 @@
 
                 html += `
                     <div class="loja-descarga-card">
-                         <h4><span class="feature-icon store"></span> ${loja.nome} (${loja.codigo}) - <span style="font-weight: bold;">${statusDescargaLabel}</span></h4>
+                         <h4><span class="feature-icon store"></span> ${loja.nome} (${loja.codigo || 'S/C'}) - <span style="font-weight: bold;">${statusDescargaLabel}</span></h4>
                          ${timerHtml}
                          <div style="text-align: center; margin-top: 15px;">${actionButton}</div>
                     </div>`;
@@ -409,7 +494,7 @@
                 const retornandoComImobilizado = await showYesNoModal('Está retornando com imobilizados (pallets, etc)?');
                 const exp = await supabaseRequest(`expeditions?id=eq.${expeditionId}&select=motorista_id`);
                 if(exp && exp[0] && exp[0].motorista_id){
-                    await supabaseRequest(`motoristas?id=eq.${exp[0].motorista_id}`, 'PATCH', { status: retornandoComImobilizado ? 'retornando_com_imobilizado' : 'retornando_cd' });
+                    await supabaseRequest(`motoristas?id=eq.${exp[0].motorista_id}`, 'PATCH', { status: retornandoComImobilizado ? 'retornando_com_imobilizado' : 'retornando_cd' }, false);
                 }
                 showNotification('Última entrega finalizada! Viagem concluída.', 'success');
             } else {
@@ -421,11 +506,11 @@
         // --- FUNÇÕES DO MODAL E QR CODE ---
         async function openQrModal(action, mainId, code, secondaryId = null) {
             modalState = { action, mainId, expectedCode: code, secondaryId, scannedValue: null };
-
             document.getElementById('qrModalTitle').textContent = `Escanear Código`;
             document.getElementById('qrModalMessage').textContent = `Aponte a câmera para o QR Code do local.`;
             document.getElementById('qr-reader').style.display = 'block';
             document.getElementById('qr-result-display').style.display = 'none';
+            document.getElementById('manualInputContainer').style.display = 'none';
             document.getElementById('confirmQrBtn').disabled = true;
             document.getElementById('qrModal').style.display = 'flex';
             
@@ -436,7 +521,6 @@
                 await html5QrCodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess, (e)=>{});
                 scannerIsRunning = true;
             } catch (err) {
-                console.log("Erro ao iniciar camera:", err);
                 document.getElementById('qr-reader').style.display = 'none';
                 document.getElementById('manualInputContainer').style.display = 'block';
                 document.getElementById('confirmQrBtn').disabled = false;
@@ -456,13 +540,8 @@
         
         async function stopScannerSafely() {
             if (html5QrCodeScanner && scannerIsRunning) {
-                try {
-                    await html5QrCodeScanner.stop();
-                    scannerIsRunning = false;
-                } catch (err) {
-                    console.warn("Aviso: Falha ao parar scanner.", err);
-                    scannerIsRunning = false; // Força o estado
-                }
+                try { await html5QrCodeScanner.stop(); } catch (err) {}
+                scannerIsRunning = false;
             }
         }
 
@@ -472,7 +551,7 @@
         }
 
         async function handleQrScan() {
-            const valueToProcess = modalState.scannedValue || document.getElementById('qrCodeInput').value;
+            const valueToProcess = (modalState.scannedValue || document.getElementById('qrCodeInput').value).trim();
             if (valueToProcess.toLowerCase() !== modalState.expectedCode.toLowerCase()) {
                 showNotification(`Código incorreto!`, 'error');
                 return;
@@ -485,13 +564,13 @@
                 else if (modalState.action === 'iniciar_descarga') await iniciarDescarga(modalState.mainId);
                 else if (modalState.action === 'finalizar_descarga') await finalizarDescarga(modalState.mainId, modalState.secondaryId);
             } catch (error) {
-                showNotification(`Erro ao processar ação: ${error.message}`, "error");
+                showNotification(`Erro ao processar: ${error.message}`, "error");
             }
         }
         
         async function showYesNoModal(message) {
             return new Promise((resolve) => {
-                closeQrModal(); // Garante que o modal de QR não está aberto
+                closeQrModal();
                 const modal = document.getElementById('qrModal');
                 document.getElementById('qrModalTitle').textContent = "Confirmação";
                 document.getElementById('qrModalMessage').textContent = message;
@@ -501,14 +580,12 @@
                 
                 const confirmBtn = document.getElementById('confirmQrBtn');
                 const cancelBtn = modal.querySelector('.btn-danger');
-
                 confirmBtn.textContent = 'Sim';
                 cancelBtn.textContent = 'Não';
                 confirmBtn.disabled = false;
 
                 const newConfirmBtn = confirmBtn.cloneNode(true);
                 confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-                
                 const newCancelBtn = cancelBtn.cloneNode(true);
                 cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
                 
@@ -518,7 +595,23 @@
                 modal.style.display = 'flex';
             });
         }
+        
+        // --- FUNÇÕES UTILITÁRIAS ---
+        function getStatusLabel(status) {
+            const labels = {
+                'aguardando_veiculo': 'Aguard. Veículo', 'em_carregamento': 'Carregando',
+                'saiu_para_entrega': 'Em Entrega', 'pendente': 'Pendente',
+                'em_descarga': 'Em Descarga', 'descarregado': 'Descarregado'
+            };
+            return labels[status] || status;
+        }
 
+        function minutesToHHMM(minutes) {
+            if (minutes === null || isNaN(minutes) || minutes < 0) return '-';
+            const h = Math.floor(minutes / 60).toString().padStart(2, '0');
+            const m = Math.round(minutes % 60).toString().padStart(2, '0');
+            return `${h}:${m}`;
+        }
     </script>
 </body>
 </html>
