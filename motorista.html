@@ -174,7 +174,7 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93c293ZXFxdHRjbXV1YW9oeGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMjQ5OTAsImV4cCI6MjA3MTgwMDk5MH0.Iee27SUOIkhMFvgDWXrW3C38DUuMr0MyVtR-NjF6FRk';
         const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' };
 
-        let filiais = [], lojas = [], docas = [], veiculos = [], motoristas = [];
+        let filiais = [], lojas = [], docas = [], veiculos = [];
         let selectedFilial = null;
         let activeTimers = {};
         let html5QrCodeScanner = null;
@@ -191,7 +191,7 @@
 
             const options = { method, headers };
             if (data) {
-                 if (includeFilialFilter && selectedFilial && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PATCH')) {
+                if (includeFilialFilter && selectedFilial && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PATCH')) {
                     if (Array.isArray(data)) {
                         data = data.map(item => ({ ...item, filial: selectedFilial.nome }));
                     } else {
@@ -278,19 +278,20 @@
             selectedFilial = null;
             document.getElementById('filialIndicator').classList.remove('active');
             document.getElementById('mainSystem').style.display = 'none';
-            document.getElementById('filialSelection').style.display = 'block';
+            document.getElementById('filialSelection').style.display = 'flex'; // Use flex para manter a centralização
             document.getElementById('resultadosMotorista').style.display = 'none';
             document.getElementById('semResultados').style.display = 'none';
+            document.getElementById('placaMotorista').value = '';
         }
 
         async function loadInitialData() {
             if (!selectedFilial) return;
             try {
-                [lojas, docas, veiculos, motoristas] = await Promise.all([
+                // AJUSTE: Removida a busca por 'motoristas' que não era utilizada nesta tela.
+                [lojas, docas, veiculos] = await Promise.all([
                     supabaseRequest('lojas?select=id,nome,codigo,codlojaqr&ativo=eq.true&order=nome'),
                     supabaseRequest('docas?select=id,nome,coddoca&ativo=eq.true&order=nome'),
-                    supabaseRequest('veiculos?select=id,placa,modelo&order=placa'),
-                    supabaseRequest('motoristas?select=id,nome&order=nome')
+                    supabaseRequest('veiculos?select=id,placa,modelo&order=placa')
                 ]);
                 populateSelects();
             } catch (error) {
@@ -340,7 +341,7 @@
                             doca_nome: doca?.nome || 'N/A',
                             doca_id: doca?.id || null
                         };
-                });
+                    });
 
                 if (expeditionsWithItems.length > 0) {
                     renderExpedicoesMotorista(expeditionsWithItems, placa);
@@ -494,6 +495,7 @@
                 const retornandoComImobilizado = await showYesNoModal('Está retornando com imobilizados (pallets, etc)?');
                 const exp = await supabaseRequest(`expeditions?id=eq.${expeditionId}&select=motorista_id`);
                 if(exp && exp[0] && exp[0].motorista_id){
+                    // A tabela 'motoristas' não tem filtro de filial, então o último argumento é 'false'
                     await supabaseRequest(`motoristas?id=eq.${exp[0].motorista_id}`, 'PATCH', { status: retornandoComImobilizado ? 'retornando_com_imobilizado' : 'retornando_cd' }, false);
                 }
                 showNotification('Última entrega finalizada! Viagem concluída.', 'success');
@@ -570,7 +572,7 @@
         
         async function showYesNoModal(message) {
             return new Promise((resolve) => {
-                closeQrModal();
+                closeQrModal(); 
                 const modal = document.getElementById('qrModal');
                 document.getElementById('qrModalTitle').textContent = "Confirmação";
                 document.getElementById('qrModalMessage').textContent = message;
@@ -584,6 +586,7 @@
                 cancelBtn.textContent = 'Não';
                 confirmBtn.disabled = false;
 
+                // Clonar para remover event listeners antigos
                 const newConfirmBtn = confirmBtn.cloneNode(true);
                 confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
                 const newCancelBtn = cancelBtn.cloneNode(true);
