@@ -1,7 +1,7 @@
 {
   "name": "Painel do Motorista",
   "short_name": "Motorista",
-  "start_url": "motorista.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#023047",
   "theme_color": "#0077B6",
