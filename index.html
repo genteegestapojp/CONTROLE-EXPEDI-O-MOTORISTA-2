@@ -210,6 +210,18 @@
         <div class="modal-content">
             <h3 class="modal-title" id="qrModalTitle"></h3>
             <div class="modal-body">
+                <p id="qrModalMessage"></p>
+                <div id="qr-reader" style="width: 100%; max-width: 300px; margin: 15px auto;"></div>
+                <div id="qr-result-display" style="display: none; padding: 10px; background-color: #e9f5ff; border-radius: 8px; margin-top: 15px; word-wrap: break-word;">
+                    <strong>QR Code escaneado:</strong> <span id="scannedValue"></span>
+                </div>
+                 <div id="manualInputContainer" style="display: none; margin-top: 20px;">
+                    <p style="margin-bottom: 10px; color: #666;">Se a câmera falhar, insira o código:</p>
+                    <input type="text" id="qrCodeInput" placeholder="Insira o código do QR Code..." class="form-group-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="confirmQrBtn" onclick="handleQrScan()">Confirmar</button>
                 <button class="btn btn-danger" onclick="closeQrModal()">Cancelar</button>
             </div>
         </div>
@@ -698,6 +710,7 @@
     </script>
 </body>
 </html>
+
 
 
 
