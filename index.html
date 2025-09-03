@@ -349,24 +349,38 @@
         async function loadInitialData() {
             if (!selectedFilial) return;
             try {
-                [lojas, docas, veiculos] = await Promise.all([
+                const [lojasData, docasData, veiculosData, activeExpeditions] = await Promise.all([
                     supabaseRequest('lojas?select=id,nome,codigo,codlojaqr&ativo=eq.true&order=nome'),
                     supabaseRequest('docas?select=id,nome,coddoca&ativo=eq.true&order=nome'),
-                    supabaseRequest('veiculos?select=id,placa,modelo&order=placa')
+                    supabaseRequest('veiculos?select=id,placa,modelo&order=placa'),
+                    supabaseRequest(`expeditions?status=in.(aguardando_veiculo,em_carregamento,saiu_para_entrega)&select=veiculo_id`)
                 ]);
-                populateSelects();
+                
+                lojas = lojasData || [];
+                docas = docasData || [];
+                veiculos = veiculosData || [];
+
+                const activeVehicleIds = [...new Set(activeExpeditions.map(exp => exp.veiculo_id))];
+                const veiculosComCarga = veiculos.filter(v => activeVehicleIds.includes(v.id));
+
+                populateSelects(veiculosComCarga);
             } catch (error) {
                 showNotification("Erro ao carregar dados da filial.", "error");
             }
         }
 
-        function populateSelects() {
+        function populateSelects(veiculosParaMostrar) {
             const placaMotoristaSelect = document.getElementById('placaMotorista');
             if (!placaMotoristaSelect) return;
+            
             placaMotoristaSelect.innerHTML = '<option value="">Selecione uma placa</option>';
-            veiculos.forEach(v => {
-                placaMotoristaSelect.innerHTML += `<option value="${v.placa}">${v.placa} - ${v.modelo || ''}</option>`;
-            });
+            if (veiculosParaMostrar && veiculosParaMostrar.length > 0) {
+                 veiculosParaMostrar.forEach(v => {
+                    placaMotoristaSelect.innerHTML += `<option value="${v.placa}">${v.placa} - ${v.modelo || ''}</option>`;
+                });
+            } else {
+                placaMotoristaSelect.innerHTML = '<option value="">Nenhum veículo com carga ativa</option>';
+            }
         }
         
         // --- LÓGICA PRINCIPAL DO MOTORISTA ---
@@ -710,7 +724,4 @@
     </script>
 </body>
 </html>
-
-
-
 
