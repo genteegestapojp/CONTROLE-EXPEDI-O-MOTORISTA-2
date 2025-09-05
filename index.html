@@ -38,6 +38,8 @@
         .btn-danger { background: linear-gradient(135deg, #D62828, #F77F00); color: white; }
         .btn-small { padding: 8px 12px; font-size: 0.85rem; }
         .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+
 
         .form-group label { margin-bottom: 6px; font-weight: 600; color: var(--dark); font-size: 0.9rem; }
         .form-group select, .form-group input {
@@ -179,6 +181,7 @@
 </head>
 <body>
 
+    <!-- Tela de Seleção de Filial (flutuante) -->
     <div id="filialSelectionContainer" class="filial-selection-container">
         <div class="filial-selection">
             <h2>Selecione a Filial</h2>
@@ -192,6 +195,7 @@
         </div>
     </div>
     
+    <!-- Conteúdo Principal -->
     <div class="main-container">
         <div id="connectionStatus" class="connection-status">Conectando...</div>
 
@@ -231,6 +235,7 @@
         </div>
     </div>
 
+    <!-- Modal de QR Code -->
     <div id="qrModal" class="modal-overlay">
         <div class="modal-content">
             <h3 class="text-xl font-semibold mb-2" id="qrModalTitle"></h3>
@@ -251,7 +256,7 @@
     </div>
 
     <script>
-        // --- INÍCIO DO SCRIPT ORIGINAL (SEM ALTERAÇÕES NA LÓGICA) ---
+        // --- INÍCIO DO SCRIPT ---
         
         // --- CONFIGURAÇÕES E FUNÇÕES GLOBAIS ---
         const SUPABASE_URL = 'https://owsoweqqttcmuuaohxke.supabase.co';
@@ -468,22 +473,29 @@
 
             let html = expeditions.map((exp, index) => {
                 const docaCompleta = docas.find(d => d.id === exp.doca_id);
-                const coddocaValue = docaCompleta ? docaCompleta.coddoca : exp.doca_nome;
+                const coddocaValue = docaCompleta ? docaCompleta.coddoca : null;
 
                 let contentHtml = '';
                 if (exp.status === 'saiu_para_entrega') {
                     contentHtml = renderPainelDescarga(exp);
                 } else {
-                    const criadaEm = new Date(exp.data_hora);
-                    const tempoEsperaTexto = minutesToHHMM((new Date() - criadaEm) / 60000);
-                    let proximaAcao = '', actionButton = '';
+                    let proximaAcao = '';
+                    let actionButton = '';
 
                     if (exp.status === 'aguardando_veiculo') {
                         proximaAcao = 'Dirija-se à doca para iniciar o carregamento';
-                        actionButton = `<button class="btn btn-success" onclick="openQrModal('iniciar', '${exp.id}', '${coddocaValue}')">Iniciar Carregamento</button>`;
+                        if (coddocaValue) {
+                            actionButton = `<button class="btn btn-success" onclick="openQrModal('iniciar', '${exp.id}', '${coddocaValue}')">Iniciar Carregamento</button>`;
+                        } else {
+                            actionButton = `<button class="btn btn-success" disabled title="Código QR da doca não configurado.">Iniciar Carregamento</button>`;
+                        }
                     } else if (exp.status === 'em_carregamento') {
                         proximaAcao = 'Aguarde a finalização do carregamento';
-                        actionButton = `<button class="btn btn-primary" onclick="openQrModal('finalizar', '${exp.id}', '${coddocaValue}')">Finalizar Carregamento</button>`;
+                         if (coddocaValue) {
+                            actionButton = `<button class="btn btn-primary" onclick="openQrModal('finalizar', '${exp.id}', '${coddocaValue}')">Finalizar Carregamento</button>`;
+                        } else {
+                            actionButton = `<button class="btn btn-primary" disabled title="Código QR da doca não configurado.">Finalizar Carregamento</button>`;
+                        }
                     }
 
                     contentHtml = `
@@ -519,14 +531,15 @@
                 if (!loja) return;
                 
                 let statusDescargaLabel = '', actionButton = '', statusColor = '';
+                const codLojaQr = loja.codlojaqr || '';
 
                 if (item.status_descarga === 'pendente' && emTransito) {
                     statusDescargaLabel = 'Próxima Entrega'; statusColor = 'text-blue-600';
-                    actionButton = `<button class="btn btn-success" onclick="openQrModal('iniciar_descarga', '${item.id}', '${loja.codlojaqr || ''}', '${exp.id}')">Iniciar Descarga</button>`;
+                    actionButton = `<button class="btn btn-success" ${!codLojaQr ? 'disabled' : ''} title="${!codLojaQr ? 'QR da loja não configurado' : ''}" onclick="openQrModal('iniciar_descarga', '${item.id}', '${codLojaQr}', '${exp.id}')">Iniciar Descarga</button>`;
                     emTransito = false;
                 } else if (item.status_descarga === 'em_descarga') {
                     statusDescargaLabel = 'Em Descarga'; statusColor = 'text-yellow-600';
-                    actionButton = `<button class="btn btn-primary" onclick="openQrModal('finalizar_descarga', '${item.id}', '${loja.codlojaqr || ''}', '${exp.id}')">Finalizar Descarga</button>`;
+                    actionButton = `<button class="btn btn-primary" ${!codLojaQr ? 'disabled' : ''} title="${!codLojaQr ? 'QR da loja não configurado' : ''}" onclick="openQrModal('finalizar_descarga', '${item.id}', '${codLojaQr}', '${exp.id}')">Finalizar Descarga</button>`;
                 } else if (item.status_descarga === 'descarregado') {
                     statusDescargaLabel = 'Descarregado'; statusColor = 'text-green-600';
                 } else {
@@ -636,11 +649,19 @@
         }
 
         async function handleQrScan() {
-            const valueToProcess = (modalState.scannedValue || document.getElementById('qrCodeInput').value).trim();
-            if (valueToProcess.toLowerCase() !== modalState.expectedCode.toLowerCase()) {
-                showNotification(`Código incorreto!`, 'error');
+            const valueToProcess = (modalState.scannedValue || document.getElementById('qrCodeInput').value || '').trim();
+            const expectedCode = modalState.expectedCode || '';
+
+            if (!expectedCode) {
+                showNotification('Código de verificação (QR Code) não encontrado para esta ação. Contacte o suporte.', 'error');
                 return;
             }
+
+            if (valueToProcess.toLowerCase() !== expectedCode.toLowerCase()) {
+                showNotification(`Código incorreto! O código escaneado não corresponde ao local.`, 'error');
+                return;
+            }
+            
             closeQrModal();
 
             try {
@@ -684,6 +705,7 @@
         async function refreshSystemData() {
             const placa = document.getElementById('placaMotorista').value;
             const refreshBtn = document.getElementById('refreshButton');
+            const icon = refreshBtn ? refreshBtn.querySelector('svg') : null;
 
             if (!selectedFilial) {
                 showNotification("Selecione uma filial primeiro.", "error");
@@ -691,7 +713,7 @@
             }
 
             if (refreshBtn) {
-                refreshBtn.querySelector('i').classList.add('animate-spin');
+                if (icon) icon.classList.add('animate-spin');
                 refreshBtn.disabled = true;
             }
             showNotification("Atualizando dados...", "success");
@@ -706,12 +728,13 @@
             } finally {
                 if (refreshBtn) {
                     setTimeout(() => {
-                        refreshBtn.querySelector('i').classList.remove('animate-spin');
+                        if (icon) icon.classList.remove('animate-spin');
                         refreshBtn.disabled = false;
                     }, 500);
                 }
             }
         }
+
 
         // --- FUNÇÕES UTILITÁRIAS ---
         function getStatusLabel(status) {
@@ -730,7 +753,8 @@
             return `${h}:${m}`;
         }
 
-        // --- FIM DO SCRIPT ORIGINAL ---
+        // --- FIM DO SCRIPT ---
     </script>
 </body>
 </html>
+
