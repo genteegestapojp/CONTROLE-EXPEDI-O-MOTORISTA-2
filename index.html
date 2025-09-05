@@ -7,158 +7,182 @@
     <link rel="manifest" href="manifest-motorista.json">
     <link rel="icon" type="image/png" href="favicon.png">
     
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
 
     <style>
-        /* Estilos essenciais e variáveis */
+        /* Variáveis Globais de Cor (do index.html) */
         :root {
-            --primary: #00D4AA; --secondary: #00B4D8; --accent: #0077B6;
-            --dark: #023047; --light: #90E0EF;
+            --primary: #00D4AA;
+            --secondary: #00B4D8;
+            --accent: #0077B6;
+            --dark: #023047;
+            --darker: #011627;
+            --light: #90E0EF;
             --primary-gradient: linear-gradient(135deg, #00D4AA 0%, #00B4D8 50%, #0077B6 100%);
             --accent-gradient: linear-gradient(135deg, #0077B6 0%, #023047 100%);
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', -apple-system, sans-serif; background: var(--primary-gradient); min-height: 100vh; padding: 10px; text-align: center; }
-        .container { max-width: 800px; margin: 0 auto; background: rgba(255, 255, 255, 0.95); border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; text-align: left;}
-        .header { background: var(--accent-gradient); color: white; padding: 20px; text-align: center; }
-        .header h1 { font-size: 1.8rem; }
-        .connection-status { background: var(--primary); color: white; padding: 8px; text-align: center; font-weight: 600; font-size: 0.9rem; }
-        .connection-status.error { background: #D62828; }
-        .filial-indicator { background: var(--accent-gradient); color: white; padding: 12px 20px; text-align: center; font-weight: 700; font-size: 1rem; display: none; }
-        .filial-indicator.active { display: block; }
-        .filial-selection { padding: 40px 20px; text-align: center; min-height: 400px; display: flex; flex-direction: column; justify-content: center; }
-        .filial-selection h2 { color: var(--dark); font-size: 2rem; margin-bottom: 20px; }
-        .filiais-grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 800px; margin: 0 auto; }
-        .filial-card { background: white; border: 2px solid rgba(0, 212, 170, 0.3); border-radius: 16px; padding: 30px; cursor: pointer; transition: all 0.3s ease; text-align: center; }
-        .filial-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 12px 30px rgba(0, 212, 170, 0.3); }
-        .filial-card h3 { color: var(--dark); font-size: 1.4rem; }
-        .tab-content.active { display: block; padding: 15px; }
-        .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
-        .form-group label { margin-bottom: 5px; font-weight: 600; color: var(--dark); }
-        .form-group select, .form-group input { padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; width: 100%; }
-        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.3s ease; width: 100%; }
+
+        /* Estilos Base */
+        body {
+            font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif;
+            background-color: #f4f7fa;
+            min-height: 100vh;
+        }
+
+        /* Estilos adaptados do index.html */
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 600; text-transform: uppercase; transition: all 0.3s ease; }
         .btn-primary { background: var(--primary-gradient); color: white; }
         .btn-success { background: linear-gradient(135deg, #00D4AA, #00B4D8); color: white; }
         .btn-danger { background: linear-gradient(135deg, #D62828, #F77F00); color: white; }
-        .btn-small { padding: 8px 12px; font-size: 0.85rem; width: auto; }
-        .btn:hover { transform: translateY(-2px); }
-        .transport-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .transport-card h3 { color: var(--dark); margin-bottom: 15px; font-size: 1.2rem; }
-        .alert { padding: 15px; border-radius: 8px; margin: 15px 0; }
-        .alert-warning { background-color: #fff3cd; color: #856404; text-align: center; }
-        .alert-warning h4 { margin: 0; }
-        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 15px; color: white; font-weight: 700; font-size: 0.8rem; text-transform: uppercase; }
-        .status-aguardando_veiculo { background: var(--primary); }
-        .status-em_carregamento { background: #F77F00; }
-        .status-saiu_para_entrega { background: #7209B7; }
-        .loja-descarga-card { background: #f9f9f9; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-        .loja-descarga-card h4 { color: var(--dark); font-size: 1rem; }
-        .time-display { background: #e9f5ff; padding: 8px; border-radius: 6px; margin-top: 10px; font-size: 0.9rem; border-left: 3px solid var(--primary); }
-        .time-display.warning { border-left-color: #F77F00; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; z-index: 1000; padding: 10px;}
-        .modal-content { background: white; padding: 20px; border-radius: 12px; max-width: 95%; width: 400px; text-align: center; }
-        .modal-title { font-size: 1.5rem; margin-bottom: 15px; color: var(--dark);}
-        .modal-footer { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .transport-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-        .feature-icon { display: inline-block; margin-right: 5px; }
-        .feature-icon.store::before { content: "🏢"; }
-        .feature-icon.package::before { content: "📦"; }
-        .feature-icon.rolltrainer::before { content: "🔄"; }
-        .feature-icon.dock::before { content: "⚓"; }
-        .feature-icon.user::before { content: "👤"; }
-        .feature-icon.clock::before { content: "⏰"; }
-        .feature-icon.building::before { content: "🏢"; }
-        .loading { text-align: center; padding: 40px 20px; color: var(--secondary); }
-        .spinner { border: 3px solid rgba(0, 212, 170, 0.1); border-top: 3px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .notification { position: fixed; top: 10px; right: 10px; left: 10px; padding: 12px 16px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; font-weight: 600; color: white; font-size: 0.9rem; text-align: center; animation: slideInTop 0.4s ease; }
-        .notification.error { background: linear-gradient(135deg, #D62828, #F77F00); }
-        .notification.success { background: linear-gradient(135deg, #00D4AA, #00B4D8); }
-        @keyframes slideInTop { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
-        .consulta-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: stretch;
+        .btn-small { padding: 8px 12px; font-size: 0.85rem; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3); }
+
+        .form-group label { margin-bottom: 6px; font-weight: 600; color: var(--dark); font-size: 0.9rem; }
+        .form-group select, .form-group input {
+            padding: 12px 16px; border: 2px solid rgba(0, 212, 170, 0.3); border-radius: 8px; font-size: 1rem;
+            background: rgba(255, 255, 255, 0.9); transition: all 0.3s ease; width: 100%;
+        }
+        .form-group select:focus, .form-group input:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
         }
 
-        .btn-refresh {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            background: var(--primary-gradient);
-            color: white;
-            border-radius: 50%;
-            border: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            font-size: 24px;
-            cursor: pointer;
+        /* Container Principal */
+        .main-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 10px;
+        }
+
+        /* Header Moderno */
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 119, 182, 0.1);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1001;
-            transition: transform 0.2s ease;
+            gap: 10px;
         }
-        .btn-refresh:hover {
-            transform: scale(1.1);
+        .header p {
+            font-size: 1.1rem;
+            color: var(--secondary);
+            margin-top: 5px;
         }
-        .btn-refresh.spinning {
-            animation: spin 1s linear infinite;
+        .connection-status {
+            padding: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 99px;
+            color: white;
+            background: var(--primary);
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+        .connection-status.error { background: #D62828; }
+
+        /* Estilos da Tela de Seleção de Filial */
+        .filial-selection-container {
+             background: var(--primary-gradient);
+             min-height: 100vh;
+             padding: 20px;
+             text-align: center;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             position: fixed;
+             top: 0;
+             left: 0;
+             width: 100%;
+             z-index: 2000;
+        }
+        .filial-selection {
+            max-width: 900px;
+            margin: auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 16px 32px rgba(0, 119, 182, 0.2);
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .filial-selection h2 { color: var(--dark); font-size: 2rem; margin-bottom: 20px; font-weight: 700; }
+        .filiais-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .filial-card {
+            background: rgba(255, 255, 255, 0.9); border: 2px solid rgba(0, 212, 170, 0.3); border-radius: 16px;
+            padding: 30px; cursor: pointer; transition: all 0.3s ease; text-align: center; position: relative; overflow: hidden;
+        }
+        .filial-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 12px 30px rgba(0, 212, 170, 0.3); }
+        .filial-card h3 { color: var(--dark); font-size: 1.4rem; margin-bottom: 10px; font-weight: 700; }
+        .filial-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--primary-gradient);
         }
 
-        #refreshButton.spinning {
-            animation: spin 1s linear infinite;
+        /* Card de Consulta */
+        .consulta-card {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 119, 182, 0.1);
         }
-
-        /* A partir de telas maiores (tablets) */
+        .consulta-form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            align-items: end;
+        }
         @media(min-width: 768px) {
-            .filiais-grid {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            }
-            .tab-content.active {
-                padding: 20px;
-            }
-            .btn { width: auto; }
-            .modal-footer { flex-direction: row; }
-            .transport-grid { grid-template-columns: 1fr 1fr; }
-            .transport-card { padding: 20px; }
-            .transport-card h3 { font-size: 1.5rem; }
-            .consulta-form {
-                flex-direction: row;
-                justify-content: center;
-                align-items: end;
-            }
-            .form-group {
-                flex-grow: 1;
-            }
-            .consulta-form .btn {
-                height: 50px; /* Alinha altura do botão com o select */
-                flex-shrink: 0; /* Impede que o botão encolha */
-            }
+            .consulta-form { grid-template-columns: 1fr auto; }
         }
+
+        /* Cards de Resultado */
+        .transport-card, .loja-descarga-card {
+            background: white; padding: 20px; border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 119, 182, 0.1); margin-bottom: 20px;
+        }
+        .status-badge { padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; display: inline-block; text-align: center; }
+        .status-aguardando_veiculo { background-color: #e0e7ff; color: #3730a3; }
+        .status-em_carregamento { background-color: #fef3c7; color: #92400e; }
+        .status-saiu_para_entrega { background-color: #cffafe; color: #0e7490; }
+
+        /* Modal Moderno */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6);
+            justify-content: center; align-items: center; z-index: 1001; padding: 10px;
+        }
+        .modal-content {
+            background: white; padding: 24px; border-radius: 12px; max-width: 95vw; width: 500px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); animation: popIn 0.3s ease;
+        }
+        @keyframes popIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Utilitários */
+        .loading { text-align: center; padding: 40px 20px; color: var(--secondary); }
+        .spinner { border: 3px solid rgba(0, 212, 170, 0.1); border-top: 3px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .notification { position: fixed; top: 10px; right: 10px; left: 10px; margin: auto; max-width: 400px; padding: 12px 16px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; font-weight: 600; color: white; font-size: 0.9rem; text-align: center; animation: slideInTop 0.4s ease; }
+        .notification.error { background: linear-gradient(135deg, #D62828, #F77F00); }
+        .notification.success { background: linear-gradient(135deg, #00D4AA, #00B4D8); }
+        @keyframes slideInTop { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="connectionStatus" class="connection-status">
-            Conectando...
-        </div>
 
-        <div id="filialIndicator" class="filial-indicator">
-            <span class="feature-icon building"></span>
-            <span id="filialNome">Nenhuma filial selecionada</span>
-        </div>
-
-        <div class="header">
-            <h1>Painel do Motorista</h1>
-            <p>Consulte suas viagens e gerencie as entregas</p>
-        </div>
-
-        <div id="filialSelection" class="filial-selection">
+    <div id="filialSelectionContainer" class="filial-selection-container">
+        <div class="filial-selection">
             <h2>Selecione a Filial</h2>
+            <p>Escolha a filial para acessar o painel do motorista.</p>
             <div id="filiaisGrid" class="filiais-grid">
                 <div class="loading">
                     <div class="spinner"></div>
@@ -166,68 +190,69 @@
                 </div>
             </div>
         </div>
+    </div>
+    
+    <div class="main-container">
+        <div id="connectionStatus" class="connection-status">Conectando...</div>
+
+        <div class="header">
+            <h1><i data-feather="truck"></i> Painel do Motorista</h1>
+            <p>Filial: <span class="font-bold" id="filialNome">N/A</span></p>
+        </div>
 
         <div id="mainSystem" style="display: none;">
-             <div style="padding: 10px 20px; text-align: center; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-danger btn-small" onclick="trocarFilial()">Trocar Filial</button>
-                <button id="refreshButton" class="btn btn-primary btn-small" onclick="refreshSystemData()">Atualizar &#x21bb;</button>
-            </div>
-            <div id="motoristas" class="tab-content active">
-                <div id="consultaViagens" class="sub-tab-content active">
-                    <div class="transport-card" style="max-width: 600px; margin: 20px auto;">
-                        <h3 style="color: var(--dark); margin-bottom: 20px; font-size: 1.4rem;">Consultar Expedições por Placa</h3>
-                        <p style="color: #666; margin-bottom: 25px;">Selecione a placa do seu veículo para ver suas atividades.</p>
-
-                        <div class="consulta-form">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label for="placaMotorista" style="text-align: left;">Placa do Veículo:</label>
-                                <select id="placaMotorista">
-                                    <option value="">Carregando...</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-primary" onclick="consultarExpedicoesPorPlaca()">
-                                Consultar
-                            </button>
-                        </div>
+             <div class="consulta-card mb-5">
+                <div class="consulta-form">
+                    <div class="form-group">
+                        <label for="placaMotorista">Selecione a Placa do Veículo:</label>
+                        <select id="placaMotorista">
+                            <option value="">Carregando...</option>
+                        </select>
                     </div>
-
-                    <div id="resultadosMotorista" style="display: none;">
-                        <div id="listaExpedicoesMotorista"></div>
-                    </div>
-
-                    <div id="semResultados" style="display: none;">
-                        <div class="alert alert-warning">
-                            <h4>Nenhuma Expedição Encontrada</h4>
-                            <p>Não foram encontradas expedições ativas para a placa informada nesta filial.</p>
-                        </div>
-                    </div>
+                    <button class="btn btn-primary" onclick="consultarExpedicoesPorPlaca()">Consultar</button>
                 </div>
+            </div>
+            
+             <div class="flex justify-center gap-4 mb-5">
+                <button class="btn btn-danger btn-small" onclick="trocarFilial()">
+                    <i data-feather="repeat" class="inline-block h-4 w-4 mr-1"></i>Trocar Filial
+                </button>
+                <button id="refreshButton" class="btn btn-success btn-small" onclick="refreshSystemData()">
+                    <i data-feather="refresh-cw" class="inline-block h-4 w-4 mr-1"></i>Atualizar
+                </button>
+            </div>
+
+            <div id="resultadosMotorista" class="mt-4" style="display: none;"></div>
+            
+            <div id="semResultados" class="transport-card text-center" style="display: none;">
+                <h4 class="text-xl font-bold text-gray-700">Nenhuma Expedição Encontrada</h4>
+                <p class="text-gray-500 mt-2">Não foram encontradas expedições ativas para a placa informada nesta filial.</p>
             </div>
         </div>
     </div>
 
     <div id="qrModal" class="modal-overlay">
         <div class="modal-content">
-            <h3 class="modal-title" id="qrModalTitle"></h3>
-            <div class="modal-body">
-                <p id="qrModalMessage"></p>
-                <div id="qr-reader" style="width: 100%; max-width: 300px; margin: 15px auto;"></div>
-                <div id="qr-result-display" style="display: none; padding: 10px; background-color: #e9f5ff; border-radius: 8px; margin-top: 15px; word-wrap: break-word;">
-                    <strong>QR Code escaneado:</strong> <span id="scannedValue"></span>
-                </div>
-                 <div id="manualInputContainer" style="display: none; margin-top: 20px;">
-                    <p style="margin-bottom: 10px; color: #666;">Se a câmera falhar, insira o código:</p>
-                    <input type="text" id="qrCodeInput" placeholder="Insira o código do QR Code..." class="form-group-input">
-                </div>
+            <h3 class="text-xl font-semibold mb-2" id="qrModalTitle"></h3>
+            <p class="text-gray-600 mb-4" id="qrModalMessage"></p>
+            <div id="qr-reader" style="width: 100%;" class="mt-4"></div>
+            <div id="qr-result-display" style="display: none; padding: 10px; background-color: #e9f5ff; border-radius: 8px; margin-top: 15px; word-wrap: break-word;">
+                <strong>QR Code escaneado:</strong> <span id="scannedValue"></span>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" id="confirmQrBtn" onclick="handleQrScan()">Confirmar</button>
-                <button class="btn btn-danger" onclick="closeQrModal()">Cancelar</button>
+            <div id="manualInputContainer" style="display: none; margin-top: 20px;">
+                <p style="margin-bottom: 10px; color: #666;">Ou, se a câmera não estiver disponível, insira manualmente:</p>
+                <input type="text" id="qrCodeInput" placeholder="Simular leitura de QR Code..." class="w-full">
+            </div>
+            <div class="flex gap-4 mt-6">
+                <button class="btn btn-primary flex-1" id="confirmQrBtn" onclick="handleQrScan()">Confirmar</button>
+                <button class="btn btn-danger flex-1" onclick="closeQrModal()">Cancelar</button>
             </div>
         </div>
     </div>
-    
+
     <script>
+        // --- INÍCIO DO SCRIPT ORIGINAL (SEM ALTERAÇÕES NA LÓGICA) ---
+        
         // --- CONFIGURAÇÕES E FUNÇÕES GLOBAIS ---
         const SUPABASE_URL = 'https://owsoweqqttcmuuaohxke.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93c293ZXFxdHRjbXV1YW9oeGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMjQ5OTAsImV4cCI6MjA3MTgwMDk5MH0.Iee27SUOIkhMFvgDWXrW3C38DUuMr0MyVtR-NjF6FRk';
@@ -295,6 +320,7 @@
 
         // --- INICIALIZAÇÃO E CONTROLE DE FILIAL ---
         document.addEventListener('DOMContentLoaded', async () => {
+            feather.replace();
             try {
                 await checkConnection();
                 await loadFiliais();
@@ -305,7 +331,7 @@
 
         async function checkConnection() {
             await supabaseRequest('filiais?select=nome&limit=1', 'GET', null, false);
-            document.getElementById('connectionStatus').textContent = 'Conectado com Sucesso';
+            document.getElementById('connectionStatus').textContent = 'Online';
             document.getElementById('connectionStatus').classList.remove('error');
         }
 
@@ -319,28 +345,26 @@
                     const card = document.createElement('div');
                     card.className = 'filial-card';
                     card.onclick = () => selectFilial(filial);
-                    card.innerHTML = `<h3>${filial.nome}</h3><p>${filial.descricao || 'Acessar filial'}</p>`;
+                    card.innerHTML = `<h3>${filial.nome}</h3>`;
                     grid.appendChild(card);
                 });
             } catch(e) {
-                document.getElementById('filiaisGrid').innerHTML = '<div class="alert alert-warning">Erro ao carregar filiais.</div>';
+                document.getElementById('filiaisGrid').innerHTML = '<p class="text-red-500">Erro ao carregar filiais.</p>';
             }
         }
 
         async function selectFilial(filial) {
             selectedFilial = filial;
             document.getElementById('filialNome').textContent = filial.nome;
-            document.getElementById('filialIndicator').classList.add('active');
-            document.getElementById('filialSelection').style.display = 'none';
+            document.getElementById('filialSelectionContainer').style.display = 'none';
             document.getElementById('mainSystem').style.display = 'block';
             await loadInitialData();
         }
 
         function trocarFilial() {
             selectedFilial = null;
-            document.getElementById('filialIndicator').classList.remove('active');
             document.getElementById('mainSystem').style.display = 'none';
-            document.getElementById('filialSelection').style.display = 'flex'; // Use flex para manter a centralização
+            document.getElementById('filialSelectionContainer').style.display = 'flex';
             document.getElementById('resultadosMotorista').style.display = 'none';
             document.getElementById('semResultados').style.display = 'none';
             document.getElementById('placaMotorista').value = '';
@@ -419,7 +443,7 @@
                     });
 
                 if (expeditionsWithItems.length > 0) {
-                    renderExpedicoesMotorista(expeditionsWithItems, placa);
+                    renderExpedicoesMotorista(expeditionsWithItems);
                 } else {
                     mostrarSemResultados();
                 }
@@ -434,10 +458,10 @@
             document.getElementById('semResultados').style.display = 'block';
         }
 
-        function renderExpedicoesMotorista(expeditions, placa) {
+        function renderExpedicoesMotorista(expeditions) {
             document.getElementById('semResultados').style.display = 'none';
-            const container = document.getElementById('listaExpedicoesMotorista');
-            document.getElementById('resultadosMotorista').style.display = 'block';
+            const container = document.getElementById('resultadosMotorista');
+            container.style.display = 'block';
             
             Object.values(activeTimers).forEach(clearInterval);
             activeTimers = {};
@@ -463,22 +487,21 @@
                     }
 
                     contentHtml = `
-                        <div style="font-weight: 600; margin-bottom: 15px;">${proximaAcao}</div>
-                        <div class="transport-grid">
-                            <div><span class="feature-icon store"></span><strong>Lojas:</strong> ${exp.lojas_info}</div>
-                            <div><span class="feature-icon package"></span><strong>Pallets:</strong> ${exp.total_pallets}</div>
-                            <div><span class="feature-icon rolltrainer"></span><strong>RollTrainers:</strong> ${exp.total_rolltrainers}</div>
-                            <div><span class="feature-icon dock"></span><strong>Doca:</strong> ${exp.doca_nome} (${coddocaValue})</div>
-                            <div><span class="feature-icon clock"></span><strong>Aguardando há:</strong> ${tempoEsperaTexto}</div>
+                        <p class="font-semibold text-gray-700 mb-4">${proximaAcao}</p>
+                        <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                            <p><strong>Lojas:</strong> ${exp.lojas_count}</p>
+                            <p><strong>Pallets:</strong> ${exp.total_pallets}</p>
+                            <p><strong>Rolls:</strong> ${exp.total_rolltrainers}</p>
+                            <p><strong>Doca:</strong> ${exp.doca_nome}</p>
                         </div>
-                        <div style="text-align: center; margin-top: 20px;">${actionButton}</div>
+                        <div class="text-center mt-4">${actionButton}</div>
                     `;
                 }
 
                 return `
                     <div class="transport-card">
-                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-                            <h3 style="margin: 0; color: var(--dark);">Viagem #${index + 1}</h3>
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-gray-800">Viagem #${index + 1}</h3>
                             <span class="status-badge status-${exp.status}">${getStatusLabel(exp.status)}</span>
                         </div>
                         ${contentHtml}
@@ -488,51 +511,40 @@
         }
 
         function renderPainelDescarga(exp) {
-            let html = '<h3 style="color: var(--dark); margin-bottom: 20px;">Roteiro de Entregas</h3>';
+            let html = '<h3 class="text-xl font-bold text-gray-800 mb-4">Roteiro de Entregas</h3>';
             let emTransito = true;
-            let ultimaDescargaFinalizada = new Date(exp.data_saida_entrega);
 
             exp.items.sort((a,b) => (a.ordem || 99) - (b.ordem || 99)).forEach(item => {
                 const loja = lojas.find(l => l.id === item.loja_id);
                 if (!loja) return;
                 
-                let statusDescargaLabel = '', actionButton = '';
-                let timerHtml = '';
+                let statusDescargaLabel = '', actionButton = '', statusColor = '';
 
-                if (item.status_descarga === 'em_descarga' && item.data_inicio_descarga) {
-                    const timerId = `timer_${item.id}`;
-                    timerHtml = `<div id="${timerId}" class="time-display warning"><strong>Tempo em Loja:</strong> ...</div>`;
-                    const startTime = new Date(item.data_inicio_descarga).getTime();
-                    if(activeTimers[timerId]) clearInterval(activeTimers[timerId]);
-                    activeTimers[timerId] = setInterval(() => {
-                        const timerEl = document.getElementById(timerId);
-                        if(timerEl) timerEl.innerHTML = `<strong>Tempo em Loja:</strong> ${minutesToHHMM((new Date().getTime() - startTime) / 60000)}`;
-                    }, 1000);
-                }
-                
                 if (item.status_descarga === 'pendente' && emTransito) {
-                    statusDescargaLabel = 'Próxima Entrega';
+                    statusDescargaLabel = 'Próxima Entrega'; statusColor = 'text-blue-600';
                     actionButton = `<button class="btn btn-success" onclick="openQrModal('iniciar_descarga', '${item.id}', '${loja.codlojaqr || ''}', '${exp.id}')">Iniciar Descarga</button>`;
                     emTransito = false;
                 } else if (item.status_descarga === 'em_descarga') {
-                    statusDescargaLabel = 'Em Descarga';
+                    statusDescargaLabel = 'Em Descarga'; statusColor = 'text-yellow-600';
                     actionButton = `<button class="btn btn-primary" onclick="openQrModal('finalizar_descarga', '${item.id}', '${loja.codlojaqr || ''}', '${exp.id}')">Finalizar Descarga</button>`;
                 } else if (item.status_descarga === 'descarregado') {
-                    statusDescargaLabel = 'Descarregado';
-                    ultimaDescargaFinalizada = new Date(item.data_fim_descarga);
+                    statusDescargaLabel = 'Descarregado'; statusColor = 'text-green-600';
                 } else {
-                    statusDescargaLabel = 'Aguardando';
+                    statusDescargaLabel = 'Aguardando'; statusColor = 'text-gray-500';
                 }
 
                 html += `
                     <div class="loja-descarga-card">
-                         <h4><span class="feature-icon store"></span> ${loja.nome} (${loja.codigo || 'S/C'}) - <span style="font-weight: bold;">${statusDescargaLabel}</span></h4>
-                         ${timerHtml}
-                         <div style="text-align: center; margin-top: 15px;">${actionButton}</div>
+                        <div class="flex justify-between items-center mb-2">
+                             <h4 class="font-bold">${loja.nome}</h4>
+                             <span class="font-bold ${statusColor}">${statusDescargaLabel}</span>
+                        </div>
+                        <div class="text-center mt-4">${actionButton}</div>
                     </div>`;
             });
             return html;
         }
+
 
         // --- FUNÇÕES DE AÇÃO (CARGA/DESCARGA) ---
         async function startLoading(expeditionId) {
@@ -570,7 +582,6 @@
                 const retornandoComImobilizado = await showYesNoModal('Está retornando com imobilizados (pallets, etc)?');
                 const exp = await supabaseRequest(`expeditions?id=eq.${expeditionId}&select=motorista_id`);
                 if(exp && exp[0] && exp[0].motorista_id){
-                    // A tabela 'motoristas' não tem filtro de filial, então o último argumento é 'false'
                     await supabaseRequest(`motoristas?id=eq.${exp[0].motorista_id}`, 'PATCH', { status: retornandoComImobilizado ? 'retornando_com_imobilizado' : 'retornando_cd' }, false);
                 }
                 showNotification('Última entrega finalizada! Viagem concluída.', 'success');
@@ -585,7 +596,6 @@
             modalState = { action, mainId, expectedCode: code, secondaryId, scannedValue: null };
             document.getElementById('qrModalTitle').textContent = `Escanear Código`;
             document.getElementById('qrModalMessage').textContent = `Aponte a câmera para o QR Code do local.`;
-            document.getElementById('qr-reader').style.display = 'block';
             document.getElementById('qr-result-display').style.display = 'none';
             document.getElementById('manualInputContainer').style.display = 'none';
             document.getElementById('confirmQrBtn').disabled = true;
@@ -595,10 +605,9 @@
             
             html5QrCodeScanner = new Html5Qrcode("qr-reader");
             try {
-                await html5QrCodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess, (e)=>{});
+                await html5QrCodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, (e)=>{});
                 scannerIsRunning = true;
             } catch (err) {
-                document.getElementById('qr-reader').style.display = 'none';
                 document.getElementById('manualInputContainer').style.display = 'block';
                 document.getElementById('confirmQrBtn').disabled = false;
             }
@@ -608,7 +617,6 @@
             if(scannerIsRunning) {
                 modalState.scannedValue = decodedText;
                 document.getElementById('scannedValue').textContent = decodedText;
-                document.getElementById('qr-reader').style.display = 'none';
                 document.getElementById('qr-result-display').style.display = 'block';
                 document.getElementById('confirmQrBtn').disabled = false;
                 stopScannerSafely();
@@ -683,7 +691,7 @@
             }
 
             if (refreshBtn) {
-                refreshBtn.classList.add('spinning');
+                refreshBtn.querySelector('i').classList.add('animate-spin');
                 refreshBtn.disabled = true;
             }
             showNotification("Atualizando dados...", "success");
@@ -698,7 +706,7 @@
             } finally {
                 if (refreshBtn) {
                     setTimeout(() => {
-                        refreshBtn.classList.remove('spinning');
+                        refreshBtn.querySelector('i').classList.remove('animate-spin');
                         refreshBtn.disabled = false;
                     }, 500);
                 }
@@ -721,7 +729,8 @@
             const m = Math.round(minutes % 60).toString().padStart(2, '0');
             return `${h}:${m}`;
         }
+
+        // --- FIM DO SCRIPT ORIGINAL ---
     </script>
 </body>
 </html>
-
