@@ -847,17 +847,17 @@
             if (!gpsActive || !currentExpedition) return;
 
             try {
-                const gpsData = {
-                    expedition_id: currentExpedition.id,
-                    motorista_id: currentExpedition.motorista_id,
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    velocidade: Math.round((position.coords.speed || 0) * 3.6), // m/s para km/h
-                    direcao: position.coords.heading || 0,
-                    precisao: Math.round(position.coords.accuracy),
-                    timestamp: new Date().toISOString(),
-                    status: determineVehicleStatus()
-                };
+const gpsData = {
+    expedition_id: currentExpedition.id,
+    motorista_id: currentExpedition.motorista_id,
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    velocidade: Math.round((position.coords.speed || 0) * 3.6),
+    direcao: position.coords.heading || 0,
+    precisao: Math.round(position.coords.accuracy),
+    data_gps: new Date().toISOString(), // <-- Corrigido para o nome da coluna no banco de dados
+    status: determineVehicleStatus()
+};
 
                 await supabaseRequest('gps_tracking', 'POST', gpsData, false);
                 
