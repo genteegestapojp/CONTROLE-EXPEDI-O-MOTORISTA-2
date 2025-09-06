@@ -36,10 +36,10 @@
         .btn-primary { background: var(--primary-gradient); color: white; }
         .btn-success { background: linear-gradient(135deg, #00D4AA, #00B4D8); color: white; }
         .btn-danger { background: linear-gradient(135deg, #D62828, #F77F00); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #F77F00, #FCBF49); color: white; }
         .btn-small { padding: 8px 12px; font-size: 0.85rem; }
         .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 119, 182, 0.3); }
-        .btn:disabled { background: #ccc; cursor: not-allowed; }
-
+        .btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
 
         .form-group label { margin-bottom: 6px; font-weight: 600; color: var(--dark); font-size: 0.9rem; }
         .form-group select, .form-group input {
@@ -65,6 +65,7 @@
             box-shadow: 0 8px 24px rgba(0, 119, 182, 0.1);
             text-align: center;
             margin-bottom: 20px;
+            position: relative;
         }
         .header h1 {
             font-size: 2rem;
@@ -92,6 +93,64 @@
             right: 15px;
         }
         .connection-status.error { background: #D62828; }
+
+        /* Status GPS */
+        .gps-status {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            padding: 8px 12px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .gps-status.active { background: linear-gradient(135deg, #10b981, #059669); }
+        .gps-status.inactive { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .gps-status.searching { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: white; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* Painel GPS */
+        .gps-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 119, 182, 0.1);
+            margin-bottom: 20px;
+        }
+        .gps-controls {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            align-items: center;
+        }
+        .gps-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .gps-metric {
+            text-align: center;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .gps-metric-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        .gps-metric-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
 
         /* Estilos da Tela de Seleção de Filial */
         .filial-selection-container {
@@ -175,7 +234,33 @@
         .notification { position: fixed; top: 10px; right: 10px; left: 10px; margin: auto; max-width: 400px; padding: 12px 16px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 2000; font-weight: 600; color: white; font-size: 0.9rem; text-align: center; animation: slideInTop 0.4s ease; }
         .notification.error { background: linear-gradient(135deg, #D62828, #F77F00); }
         .notification.success { background: linear-gradient(135deg, #00D4AA, #00B4D8); }
+        .notification.info { background: linear-gradient(135deg, #0077B6, #023047); }
         @keyframes slideInTop { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Estatísticas de rastreamento */
+        .tracking-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .tracking-stat {
+            text-align: center;
+            padding: 10px;
+            background: rgba(0, 212, 170, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 212, 170, 0.2);
+        }
+        .tracking-stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .tracking-stat-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
 
     </style>
 </head>
@@ -197,15 +282,74 @@
     
     <!-- Conteúdo Principal -->
     <div class="main-container">
-        <div id="connectionStatus" class="connection-status">Conectando...</div>
+        
 
         <div class="header">
+            <div id="gpsStatus" class="gps-status inactive">
+                <div class="pulse-dot"></div>
+                <span>GPS Inativo</span>
+            </div>
+            <div id="connectionStatus" class="connection-status">Conectando...</div>
             <h1><i data-feather="truck"></i> Painel do Motorista</h1>
             <p>Filial: <span class="font-bold" id="filialNome">N/A</span></p>
         </div>
 
         <div id="mainSystem" style="display: none;">
-             <div class="consulta-card mb-5">
+            
+            <!-- Painel GPS -->
+            <div class="gps-panel">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">🛰️ Controle de Rastreamento GPS</h3>
+                <div class="gps-controls">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-2">Status: <span id="gpsStatusText" class="font-semibold">Inativo</span></p>
+                        <p class="text-xs text-gray-500">O rastreamento GPS é obrigatório durante as entregas</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="startGpsBtn" class="btn btn-success btn-small" onclick="startGPSTracking()">
+                            <i data-feather="play" class="inline-block h-4 w-4 mr-1"></i>Iniciar GPS
+                        </button>
+                        <button id="stopGpsBtn" class="btn btn-danger btn-small" onclick="stopGPSTracking()" style="display: none;">
+                            <i data-feather="square" class="inline-block h-4 w-4 mr-1"></i>Parar GPS
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="gpsInfo" class="gps-info" style="display: none;">
+                    <div class="gps-metric">
+                        <div class="gps-metric-value" id="currentLat">-</div>
+                        <div class="gps-metric-label">Latitude</div>
+                    </div>
+                    <div class="gps-metric">
+                        <div class="gps-metric-value" id="currentLng">-</div>
+                        <div class="gps-metric-label">Longitude</div>
+                    </div>
+                    <div class="gps-metric">
+                        <div class="gps-metric-value" id="currentSpeed">0</div>
+                        <div class="gps-metric-label">Velocidade (km/h)</div>
+                    </div>
+                    <div class="gps-metric">
+                        <div class="gps-metric-value" id="gpsAccuracy">-</div>
+                        <div class="gps-metric-label">Precisão (m)</div>
+                    </div>
+                </div>
+
+                <div id="trackingStats" class="tracking-stats" style="display: none;">
+                    <div class="tracking-stat">
+                        <div class="tracking-stat-value" id="trackingDuration">00:00</div>
+                        <div class="tracking-stat-label">Tempo Ativo</div>
+                    </div>
+                    <div class="tracking-stat">
+                        <div class="tracking-stat-value" id="positionsSent">0</div>
+                        <div class="tracking-stat-label">Posições Enviadas</div>
+                    </div>
+                    <div class="tracking-stat">
+                        <div class="tracking-stat-value" id="lastUpdate">-</div>
+                        <div class="tracking-stat-label">Último Envio</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="consulta-card mb-5">
                 <div class="consulta-form">
                     <div class="form-group">
                         <label for="placaMotorista">Selecione a Placa do Veículo:</label>
@@ -223,6 +367,9 @@
                 </button>
                 <button id="refreshButton" class="btn btn-success btn-small" onclick="refreshSystemData()">
                     <i data-feather="refresh-cw" class="inline-block h-4 w-4 mr-1"></i>Atualizar
+                </button>
+                <button class="btn btn-warning btn-small" onclick="viewLocationHistory()">
+                    <i data-feather="map-pin" class="inline-block h-4 w-4 mr-1"></i>Ver Histórico
                 </button>
             </div>
 
@@ -269,6 +416,15 @@
         let html5QrCodeScanner = null;
         let scannerIsRunning = false;
         let modalState = {};
+
+        // --- VARIÁVEIS DO GPS ---
+        let gpsWatchId = null;
+        let gpsActive = false;
+        let currentExpedition = null;
+        let lastPosition = null;
+        let trackingStartTime = null;
+        let positionsSentCount = 0;
+        let gpsTimer = null;
 
         async function supabaseRequest(endpoint, method = 'GET', data = null, includeFilialFilter = true) {
             let url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
@@ -323,6 +479,215 @@
             }, 4000);
         }
 
+        // --- FUNCIONALIDADES GPS ---
+        
+        function updateGPSStatus(status, text) {
+            const gpsStatus = document.getElementById('gpsStatus');
+            const gpsStatusText = document.getElementById('gpsStatusText');
+            
+            gpsStatus.className = `gps-status ${status}`;
+            gpsStatus.innerHTML = `<div class="pulse-dot"></div><span>${text}</span>`;
+            
+            if (gpsStatusText) {
+                gpsStatusText.textContent = text;
+            }
+        }
+
+        function updateGPSDisplay(position) {
+            document.getElementById('currentLat').textContent = position.coords.latitude.toFixed(6);
+            document.getElementById('currentLng').textContent = position.coords.longitude.toFixed(6);
+            document.getElementById('currentSpeed').textContent = Math.round((position.coords.speed || 0) * 3.6); // m/s para km/h
+            document.getElementById('gpsAccuracy').textContent = Math.round(position.coords.accuracy);
+            
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            // Atualizar tempo ativo
+            if (trackingStartTime) {
+                const duration = Math.floor((now - trackingStartTime) / 1000 / 60); // minutos
+                const hours = Math.floor(duration / 60);
+                const minutes = duration % 60;
+                document.getElementById('trackingDuration').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+        }
+
+        async function startGPSTracking() {
+            if (!navigator.geolocation) {
+                showNotification('GPS não disponível neste dispositivo', 'error');
+                return;
+            }
+
+            updateGPSStatus('searching', 'GPS Buscando Sinal...');
+            document.getElementById('startGpsBtn').style.display = 'none';
+            document.getElementById('stopGpsBtn').style.display = 'inline-block';
+
+            try {
+                // Primeiro, obter posição atual
+                const position = await getCurrentPosition();
+                
+                gpsActive = true;
+                trackingStartTime = new Date();
+                lastPosition = position;
+                
+                updateGPSStatus('active', 'GPS Ativo');
+                document.getElementById('gpsInfo').style.display = 'grid';
+                document.getElementById('trackingStats').style.display = 'grid';
+                updateGPSDisplay(position);
+                
+                // Enviar primeira posição
+                await sendGPSPosition(position);
+                
+                // Iniciar monitoramento contínuo
+                gpsWatchId = navigator.geolocation.watchPosition(
+                    async (newPosition) => {
+                        lastPosition = newPosition;
+                        updateGPSDisplay(newPosition);
+                        await sendGPSPosition(newPosition);
+                    },
+                    (error) => {
+                        console.error('Erro GPS:', error);
+                        updateGPSStatus('inactive', 'Erro GPS');
+                        showNotification('Erro ao obter localização GPS', 'error');
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 30000
+                    }
+                );
+
+                // Timer para enviar posições a cada 30 segundos
+                gpsTimer = setInterval(() => {
+                    if (lastPosition) {
+                        sendGPSPosition(lastPosition);
+                    }
+                }, 30000);
+
+                showNotification('Rastreamento GPS iniciado com sucesso!', 'success');
+
+            } catch (error) {
+                console.error('Erro ao iniciar GPS:', error);
+                updateGPSStatus('inactive', 'GPS Inativo');
+                document.getElementById('startGpsBtn').style.display = 'inline-block';
+                document.getElementById('stopGpsBtn').style.display = 'none';
+                showNotification('Erro ao iniciar GPS: ' + error.message, 'error');
+            }
+        }
+
+        function getCurrentPosition() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 60000
+                });
+            });
+        }
+
+        async function sendGPSPosition(position) {
+            if (!gpsActive || !currentExpedition) return;
+
+            try {
+                const gpsData = {
+                    expedition_id: currentExpedition.id,
+                    motorista_id: currentExpedition.motorista_id,
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    velocidade: Math.round((position.coords.speed || 0) * 3.6), // m/s para km/h
+                    direcao: position.coords.heading || 0,
+                    precisao: Math.round(position.coords.accuracy),
+                    timestamp: new Date().toISOString(),
+                    status: determineVehicleStatus()
+                };
+
+                await supabaseRequest('gps_tracking', 'POST', gpsData, false);
+                
+                positionsSentCount++;
+                document.getElementById('positionsSent').textContent = positionsSentCount;
+                
+                console.log('Posição GPS enviada:', gpsData);
+
+            } catch (error) {
+                console.error('Erro ao enviar posição GPS:', error);
+            }
+        }
+
+        function determineVehicleStatus() {
+            if (!currentExpedition) return 'em_movimento';
+            
+            // Determinar status baseado na velocidade e status da expedição
+            const speed = lastPosition ? (lastPosition.coords.speed || 0) * 3.6 : 0;
+            
+            if (currentExpedition.status === 'saiu_para_entrega') {
+                if (speed < 5) {
+                    // Verificar se está em uma loja (descarga)
+                    const itemEmDescarga = currentExpedition.items?.find(item => item.status_descarga === 'em_descarga');
+                    return itemEmDescarga ? 'em_descarga' : 'parado';
+                } else {
+                    return 'em_movimento';
+                }
+            } else if (currentExpedition.status === 'em_carregamento') {
+                return 'carregando';
+            }
+            
+            return 'em_movimento';
+        }
+
+        function stopGPSTracking() {
+            if (gpsWatchId) {
+                navigator.geolocation.clearWatch(gpsWatchId);
+                gpsWatchId = null;
+            }
+            
+            if (gpsTimer) {
+                clearInterval(gpsTimer);
+                gpsTimer = null;
+            }
+            
+            gpsActive = false;
+            updateGPSStatus('inactive', 'GPS Inativo');
+            
+            document.getElementById('startGpsBtn').style.display = 'inline-block';
+            document.getElementById('stopGpsBtn').style.display = 'none';
+            document.getElementById('gpsInfo').style.display = 'none';
+            document.getElementById('trackingStats').style.display = 'none';
+            
+            showNotification('Rastreamento GPS parado', 'info');
+        }
+
+        async function viewLocationHistory() {
+            if (!currentExpedition) {
+                showNotification('Selecione uma expedição primeiro', 'error');
+                return;
+            }
+
+            try {
+                const gpsHistory = await supabaseRequest(
+                    `gps_tracking?expedition_id=eq.${currentExpedition.id}&order=timestamp.desc&limit=50`,
+                    'GET', null, false
+                );
+
+                if (gpsHistory && gpsHistory.length > 0) {
+                    // Mostrar últimas 5 posições em uma notificação
+                    const recentPositions = gpsHistory.slice(0, 5);
+                    let message = 'Últimas posições GPS:<br>';
+                    recentPositions.forEach((pos, index) => {
+                        const time = new Date(pos.timestamp).toLocaleTimeString('pt-BR');
+                        message += `${index + 1}. ${time} - ${pos.latitude.toFixed(4)}, ${pos.longitude.toFixed(4)} (${pos.velocidade}km/h)<br>`;
+                    });
+                    
+                    // Criar modal customizado para histórico
+                    showNotification(`Histórico carregado! Total: ${gpsHistory.length} posições`, 'success');
+                } else {
+                    showNotification('Nenhum histórico GPS encontrado para esta expedição', 'info');
+                }
+            } catch (error) {
+                console.error('Erro ao carregar histórico GPS:', error);
+                showNotification('Erro ao carregar histórico GPS', 'error');
+            }
+        }
+
         // --- INICIALIZAÇÃO E CONTROLE DE FILIAL ---
         document.addEventListener('DOMContentLoaded', async () => {
             feather.replace();
@@ -368,6 +733,9 @@
 
         function trocarFilial() {
             selectedFilial = null;
+            currentExpedition = null;
+            stopGPSTracking(); // Parar GPS ao trocar de filial
+            
             document.getElementById('mainSystem').style.display = 'none';
             document.getElementById('filialSelectionContainer').style.display = 'flex';
             document.getElementById('resultadosMotorista').style.display = 'none';
@@ -443,13 +811,21 @@
                             total_rolltrainers: expItems.reduce((s, i) => s + (i.rolltrainers || 0), 0),
                             lojas_info: expItems.map(i => lojas.find(l => l.id === i.loja_id)?.nome || 'N/A').join(', '),
                             doca_nome: doca?.nome || 'N/A',
-                            doca_id: doca?.id || null
+                            doca_id: doca?.id || null,
+                            motorista_id: exp.motorista_id // Importante para o GPS
                         };
                     });
 
                 if (expeditionsWithItems.length > 0) {
+                    currentExpedition = expeditionsWithItems[0]; // Armazenar expedição atual para GPS
                     renderExpedicoesMotorista(expeditionsWithItems);
+                    
+                    // Sugerir iniciar GPS se não estiver ativo
+                    if (!gpsActive && currentExpedition.status === 'saiu_para_entrega') {
+                        showNotification('💡 Recomendamos ativar o GPS para rastreamento durante as entregas', 'info');
+                    }
                 } else {
+                    currentExpedition = null;
                     mostrarSemResultados();
                 }
 
@@ -558,7 +934,6 @@
             return html;
         }
 
-
         // --- FUNÇÕES DE AÇÃO (CARGA/DESCARGA) ---
         async function startLoading(expeditionId) {
             await supabaseRequest(`expeditions?id=eq.${expeditionId}`, 'PATCH', {
@@ -598,6 +973,12 @@
                     await supabaseRequest(`motoristas?id=eq.${exp[0].motorista_id}`, 'PATCH', { status: retornandoComImobilizado ? 'retornando_com_imobilizado' : 'retornando_cd' }, false);
                 }
                 showNotification('Última entrega finalizada! Viagem concluída.', 'success');
+                
+                // Parar GPS automaticamente quando concluir todas as entregas
+                if (gpsActive) {
+                    stopGPSTracking();
+                    showNotification('Rastreamento GPS finalizado automaticamente', 'info');
+                }
             } else {
                 showNotification('Descarga da loja finalizada!', 'success');
             }
@@ -665,10 +1046,20 @@
             closeQrModal();
 
             try {
-                if (modalState.action === 'iniciar') await startLoading(modalState.mainId);
-                else if (modalState.action === 'finalizar') await finishLoading(modalState.mainId);
-                else if (modalState.action === 'iniciar_descarga') await iniciarDescarga(modalState.mainId);
-                else if (modalState.action === 'finalizar_descarga') await finalizarDescarga(modalState.mainId, modalState.secondaryId);
+                if (modalState.action === 'iniciar') {
+                    await startLoading(modalState.mainId);
+                } else if (modalState.action === 'finalizar') {
+                    await finishLoading(modalState.mainId);
+                    // Iniciar GPS automaticamente quando sair para entrega
+                    if (!gpsActive) {
+                        showNotification('💡 Iniciando rastreamento GPS automaticamente para a entrega', 'info');
+                        setTimeout(() => startGPSTracking(), 1000);
+                    }
+                } else if (modalState.action === 'iniciar_descarga') {
+                    await iniciarDescarga(modalState.mainId);
+                } else if (modalState.action === 'finalizar_descarga') {
+                    await finalizarDescarga(modalState.mainId, modalState.secondaryId);
+                }
             } catch (error) {
                 showNotification(`Erro ao processar: ${error.message}`, "error");
             }
@@ -735,7 +1126,6 @@
             }
         }
 
-
         // --- FUNÇÕES UTILITÁRIAS ---
         function getStatusLabel(status) {
             const labels = {
@@ -753,8 +1143,14 @@
             return `${h}:${m}`;
         }
 
+        // --- LIMPEZA AO SAIR DA PÁGINA ---
+        window.addEventListener('beforeunload', () => {
+            if (gpsActive) {
+                stopGPSTracking();
+            }
+        });
+
         // --- FIM DO SCRIPT ---
     </script>
 </body>
 </html>
-
