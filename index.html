@@ -855,8 +855,9 @@ const gpsData = {
     velocidade: Math.round((position.coords.speed || 0) * 3.6),
     direcao: position.coords.heading || 0,
     precisao: Math.round(position.coords.accuracy),
-    data_gps: new Date().toISOString(), // <-- Corrigido para o nome da coluna no banco de dados
-    status: determineVehicleStatus()
+    data_gps: new Date().toISOString(),
+    status: determineVehicleStatus(),
+    filial: selectedFilial.nome // <-- Adicione esta linha
 };
 
                 await supabaseRequest('gps_tracking', 'POST', gpsData, false);
