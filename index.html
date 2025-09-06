@@ -111,6 +111,8 @@
         .gps-status.active { background: linear-gradient(135deg, #10b981, #059669); }
         .gps-status.inactive { background: linear-gradient(135deg, #ef4444, #dc2626); }
         .gps-status.searching { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .gps-status.permission-needed { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+        .gps-status.permission-denied { background: linear-gradient(135deg, #dc2626, #991b1b); }
         .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: white; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
@@ -150,6 +152,38 @@
             font-size: 0.75rem;
             color: #64748b;
             margin-top: 2px;
+        }
+
+        /* Alertas de Permissão GPS */
+        .gps-permission-alert {
+            background: linear-gradient(135deg, #fef3c7, #fbbf24);
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 15px;
+            color: #92400e;
+        }
+        .gps-permission-alert.denied {
+            background: linear-gradient(135deg, #fee2e2, #f87171);
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+        .gps-permission-alert h4 {
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .gps-permission-alert p {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        .gps-permission-alert ul {
+            font-size: 0.85rem;
+            margin-left: 16px;
+            line-height: 1.4;
         }
 
         /* Estilos da Tela de Seleção de Filial */
@@ -299,6 +333,33 @@
             <!-- Painel GPS -->
             <div class="gps-panel">
                 <h3 class="text-lg font-bold text-gray-800 mb-4">🛰️ Controle de Rastreamento GPS</h3>
+                
+                <!-- Alert de Permissão GPS -->
+                <div id="gpsPermissionAlert" class="gps-permission-alert" style="display: none;">
+                    <h4>
+                        <i data-feather="alert-triangle"></i>
+                        <span id="permissionAlertTitle">Permissão GPS Necessária</span>
+                    </h4>
+                    <p id="permissionAlertText">Para ativar o rastreamento, é necessário conceder permissão de localização.</p>
+                    <div id="permissionInstructions" style="display: none;">
+                        <p><strong>Como conceder permissão:</strong></p>
+                        <ul>
+                            <li>Clique no ícone de localização na barra de endereços</li>
+                            <li>Selecione "Permitir" ou "Allow"</li>
+                            <li>Se já negou, clique no ícone e mude para "Permitir"</li>
+                            <li>Recarregue a página se necessário</li>
+                        </ul>
+                    </div>
+                    <div class="mt-3">
+                        <button id="requestPermissionBtn" class="btn btn-warning btn-small" onclick="requestGPSPermission()">
+                            <i data-feather="unlock" class="inline-block h-4 w-4 mr-1"></i>Solicitar Permissão
+                        </button>
+                        <button id="checkPermissionBtn" class="btn btn-success btn-small" onclick="checkGPSPermission()" style="display: none;">
+                            <i data-feather="refresh-cw" class="inline-block h-4 w-4 mr-1"></i>Verificar Novamente
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="gps-controls">
                     <div>
                         <p class="text-sm text-gray-600 mb-2">Status: <span id="gpsStatusText" class="font-semibold">Inativo</span></p>
@@ -425,6 +486,7 @@
         let trackingStartTime = null;
         let positionsSentCount = 0;
         let gpsTimer = null;
+        let gpsPermissionStatus = 'unknown'; // 'granted', 'denied', 'prompt', 'unknown'
 
         async function supabaseRequest(endpoint, method = 'GET', data = null, includeFilialFilter = true) {
             let url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
@@ -479,7 +541,7 @@
             }, 4000);
         }
 
-        // --- FUNCIONALIDADES GPS ---
+        // --- FUNCIONALIDADES GPS E PERMISSÕES ---
         
         function updateGPSStatus(status, text) {
             const gpsStatus = document.getElementById('gpsStatus');
@@ -490,6 +552,160 @@
             
             if (gpsStatusText) {
                 gpsStatusText.textContent = text;
+            }
+        }
+
+        // Verificar status de permissão GPS
+        async function checkGPSPermission() {
+            if (!navigator.geolocation) {
+                updateGPSPermissionUI('not-supported');
+                return 'not-supported';
+            }
+
+            try {
+                // Verificar se a API de permissões está disponível
+                if ('permissions' in navigator) {
+                    const permission = await navigator.permissions.query({ name: 'geolocation' });
+                    gpsPermissionStatus = permission.state; // 'granted', 'denied', 'prompt'
+                    updateGPSPermissionUI(permission.state);
+                    
+                    // Listener para mudanças de permissão
+                    permission.onchange = () => {
+                        gpsPermissionStatus = permission.state;
+                        updateGPSPermissionUI(permission.state);
+                    };
+                    
+                    return permission.state;
+                } else {
+                    // Fallback para navegadores sem API de permissões
+                    gpsPermissionStatus = 'unknown';
+                    updateGPSPermissionUI('unknown');
+                    return 'unknown';
+                }
+            } catch (error) {
+                console.error('Erro ao verificar permissão GPS:', error);
+                gpsPermissionStatus = 'unknown';
+                updateGPSPermissionUI('unknown');
+                return 'unknown';
+            }
+        }
+
+        // Atualizar UI baseado no status da permissão
+        function updateGPSPermissionUI(permissionState) {
+            const alertElement = document.getElementById('gpsPermissionAlert');
+            const alertTitle = document.getElementById('permissionAlertTitle');
+            const alertText = document.getElementById('permissionAlertText');
+            const instructions = document.getElementById('permissionInstructions');
+            const requestBtn = document.getElementById('requestPermissionBtn');
+            const checkBtn = document.getElementById('checkPermissionBtn');
+            const startGpsBtn = document.getElementById('startGpsBtn');
+
+            // Esconder alerta por padrão
+            alertElement.style.display = 'none';
+            alertElement.className = 'gps-permission-alert';
+
+            switch (permissionState) {
+                case 'granted':
+                    // Permissão concedida - esconder alerta, habilitar botão
+                    updateGPSStatus('inactive', 'GPS Disponível');
+                    startGpsBtn.disabled = false;
+                    break;
+
+                case 'denied':
+                    // Permissão negada - mostrar alerta vermelho
+                    alertElement.style.display = 'block';
+                    alertElement.classList.add('denied');
+                    alertTitle.textContent = 'Permissão GPS Negada';
+                    alertText.textContent = 'A permissão de localização foi negada. O rastreamento GPS não funcionará.';
+                    instructions.style.display = 'block';
+                    requestBtn.style.display = 'none';
+                    checkBtn.style.display = 'inline-block';
+                    startGpsBtn.disabled = true;
+                    updateGPSStatus('permission-denied', 'GPS Bloqueado');
+                    break;
+
+                case 'prompt':
+                    // Permissão não solicitada ainda
+                    alertElement.style.display = 'block';
+                    alertTitle.textContent = 'Permissão GPS Necessária';
+                    alertText.textContent = 'Para ativar o rastreamento, é necessário conceder permissão de localização.';
+                    instructions.style.display = 'none';
+                    requestBtn.style.display = 'inline-block';
+                    checkBtn.style.display = 'none';
+                    startGpsBtn.disabled = true;
+                    updateGPSStatus('permission-needed', 'Permissão Necessária');
+                    break;
+
+                case 'not-supported':
+                    // GPS não suportado
+                    alertElement.style.display = 'block';
+                    alertElement.classList.add('denied');
+                    alertTitle.textContent = 'GPS Não Suportado';
+                    alertText.textContent = 'Este dispositivo não suporta GPS ou localização.';
+                    instructions.style.display = 'none';
+                    requestBtn.style.display = 'none';
+                    checkBtn.style.display = 'none';
+                    startGpsBtn.disabled = true;
+                    updateGPSStatus('permission-denied', 'GPS Indisponível');
+                    break;
+
+                default: // 'unknown'
+                    // Status desconhecido - permitir tentativa
+                    alertElement.style.display = 'block';
+                    alertTitle.textContent = 'Status GPS Desconhecido';
+                    alertText.textContent = 'Clique em "Iniciar GPS" para verificar se a localização está disponível.';
+                    instructions.style.display = 'none';
+                    requestBtn.style.display = 'none';
+                    checkBtn.style.display = 'none';
+                    startGpsBtn.disabled = false;
+                    updateGPSStatus('inactive', 'GPS Inativo');
+                    break;
+            }
+        }
+
+        // Solicitar permissão GPS explicitamente
+        async function requestGPSPermission() {
+            if (!navigator.geolocation) {
+                showNotification('GPS não está disponível neste dispositivo', 'error');
+                return;
+            }
+
+            try {
+                // Tentar obter a posição para forçar a solicitação de permissão
+                updateGPSStatus('searching', 'Solicitando Permissão...');
+                showNotification('Aguarde... Solicitando permissão de localização', 'info');
+
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(
+                        resolve,
+                        reject,
+                        {
+                            enableHighAccuracy: false, // Usar baixa precisão para ser mais rápido
+                            timeout: 10000,
+                            maximumAge: 300000 // 5 minutos
+                        }
+                    );
+                });
+
+                // Se chegou aqui, a permissão foi concedida
+                gpsPermissionStatus = 'granted';
+                updateGPSPermissionUI('granted');
+                showNotification('Permissão GPS concedida com sucesso!', 'success');
+
+            } catch (error) {
+                console.error('Erro ao solicitar permissão GPS:', error);
+                
+                if (error.code === error.PERMISSION_DENIED) {
+                    gpsPermissionStatus = 'denied';
+                    updateGPSPermissionUI('denied');
+                    showNotification('Permissão GPS negada. Verifique as configurações do navegador.', 'error');
+                } else if (error.code === error.TIMEOUT) {
+                    showNotification('Timeout ao obter localização. Tente novamente.', 'error');
+                    updateGPSStatus('inactive', 'GPS Inativo');
+                } else {
+                    showNotification('Erro ao acessar GPS: ' + error.message, 'error');
+                    updateGPSStatus('inactive', 'GPS Inativo');
+                }
             }
         }
 
@@ -513,6 +729,19 @@
         }
 
         async function startGPSTracking() {
+            // Verificar permissão primeiro
+            const permissionState = await checkGPSPermission();
+            
+            if (permissionState === 'denied') {
+                showNotification('Permissão GPS negada. Ative nas configurações do navegador.', 'error');
+                return;
+            }
+            
+            if (permissionState === 'not-supported') {
+                showNotification('GPS não disponível neste dispositivo', 'error');
+                return;
+            }
+
             if (!navigator.geolocation) {
                 showNotification('GPS não disponível neste dispositivo', 'error');
                 return;
@@ -523,7 +752,7 @@
             document.getElementById('stopGpsBtn').style.display = 'inline-block';
 
             try {
-                // Primeiro, obter posição atual
+                // Primeiro, obter posição atual com timeout maior
                 const position = await getCurrentPosition();
                 
                 gpsActive = true;
@@ -531,6 +760,7 @@
                 lastPosition = position;
                 
                 updateGPSStatus('active', 'GPS Ativo');
+                updateGPSPermissionUI('granted'); // Esconder alerta de permissão
                 document.getElementById('gpsInfo').style.display = 'grid';
                 document.getElementById('trackingStats').style.display = 'grid';
                 updateGPSDisplay(position);
@@ -547,8 +777,7 @@
                     },
                     (error) => {
                         console.error('Erro GPS:', error);
-                        updateGPSStatus('inactive', 'Erro GPS');
-                        showNotification('Erro ao obter localização GPS', 'error');
+                        handleGPSError(error);
                     },
                     {
                         enableHighAccuracy: true,
@@ -568,11 +797,40 @@
 
             } catch (error) {
                 console.error('Erro ao iniciar GPS:', error);
-                updateGPSStatus('inactive', 'GPS Inativo');
+                handleGPSError(error);
+                
+                // Restaurar botões em caso de erro
                 document.getElementById('startGpsBtn').style.display = 'inline-block';
                 document.getElementById('stopGpsBtn').style.display = 'none';
-                showNotification('Erro ao iniciar GPS: ' + error.message, 'error');
             }
+        }
+
+        function handleGPSError(error) {
+            let errorMessage = 'Erro desconhecido ao acessar GPS';
+            let statusText = 'GPS Inativo';
+
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = 'Permissão GPS negada. Verifique as configurações.';
+                    statusText = 'GPS Bloqueado';
+                    gpsPermissionStatus = 'denied';
+                    updateGPSPermissionUI('denied');
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = 'Localização indisponível. Verifique o GPS do dispositivo.';
+                    statusText = 'GPS Indisponível';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = 'Timeout ao obter localização GPS.';
+                    statusText = 'GPS Timeout';
+                    break;
+                default:
+                    errorMessage = `Erro GPS: ${error.message}`;
+                    break;
+            }
+
+            updateGPSStatus('inactive', statusText);
+            showNotification(errorMessage, 'error');
         }
 
         function getCurrentPosition() {
@@ -653,6 +911,9 @@
             document.getElementById('gpsInfo').style.display = 'none';
             document.getElementById('trackingStats').style.display = 'none';
             
+            // Verificar permissão novamente para mostrar o alerta apropriado
+            checkGPSPermission();
+            
             showNotification('Rastreamento GPS parado', 'info');
         }
 
@@ -694,6 +955,8 @@
             try {
                 await checkConnection();
                 await loadFiliais();
+                // Verificar permissão GPS na inicialização
+                await checkGPSPermission();
             } catch (error) {
                 console.error("Falha na inicialização:", error);
             }
@@ -728,6 +991,9 @@
             document.getElementById('filialNome').textContent = filial.nome;
             document.getElementById('filialSelectionContainer').style.display = 'none';
             document.getElementById('mainSystem').style.display = 'block';
+            
+            // Verificar permissão GPS novamente quando entrar no sistema
+            await checkGPSPermission();
             await loadInitialData();
         }
 
@@ -820,8 +1086,8 @@
                     currentExpedition = expeditionsWithItems[0]; // Armazenar expedição atual para GPS
                     renderExpedicoesMotorista(expeditionsWithItems);
                     
-                    // Sugerir iniciar GPS se não estiver ativo
-                    if (!gpsActive && currentExpedition.status === 'saiu_para_entrega') {
+                    // Sugerir iniciar GPS se não estiver ativo e permissão for concedida
+                    if (!gpsActive && currentExpedition.status === 'saiu_para_entrega' && gpsPermissionStatus === 'granted') {
                         showNotification('💡 Recomendamos ativar o GPS para rastreamento durante as entregas', 'info');
                     }
                 } else {
@@ -1050,10 +1316,12 @@
                     await startLoading(modalState.mainId);
                 } else if (modalState.action === 'finalizar') {
                     await finishLoading(modalState.mainId);
-                    // Iniciar GPS automaticamente quando sair para entrega
-                    if (!gpsActive) {
+                    // Iniciar GPS automaticamente quando sair para entrega se permissão estiver concedida
+                    if (!gpsActive && gpsPermissionStatus === 'granted') {
                         showNotification('💡 Iniciando rastreamento GPS automaticamente para a entrega', 'info');
                         setTimeout(() => startGPSTracking(), 1000);
+                    } else if (!gpsActive && gpsPermissionStatus !== 'granted') {
+                        showNotification('💡 Para rastreamento durante a entrega, ative o GPS quando a permissão for concedida', 'info');
                     }
                 } else if (modalState.action === 'iniciar_descarga') {
                     await iniciarDescarga(modalState.mainId);
@@ -1110,6 +1378,7 @@
             showNotification("Atualizando dados...", "success");
 
             try {
+                await checkGPSPermission(); // Verificar permissão na atualização
                 await loadInitialData();
                 if (placa) {
                     await consultarExpedicoesPorPlaca();
