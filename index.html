@@ -412,17 +412,14 @@
                     }
                     map.setView(newLatLng, 16);
 
-                    // Só envia dados se houver uma expedição ativa carregada
                     if(activeExpedition) {
                         try {
-                            // CORREÇÃO FINAL: Envia os dados corretos para a tabela gps_tracking
                             const trackingData = {
                                 expedition_id: activeExpedition.id,
-                                motorista_id: activeExpedition.motorista_id, // Pode ser null, está ok
+                                motorista_id: activeExpedition.motorista_id,
                                 latitude: latitude,
                                 longitude: longitude,
                                 data_gps: new Date().toISOString()
-                                // A filial é adicionada automaticamente pela função supabaseRequest
                             };
                             await supabaseRequest('gps_tracking', 'POST', trackingData, true);
 
@@ -485,16 +482,19 @@
                             ...exp, items: expItems, lojas_count: expItems.length,
                             total_pallets: expItems.reduce((s, i) => s + (i.pallets || 0), 0),
                             total_rolltrainers: expItems.reduce((s, i) => s + (i.rolltrainers || 0), 0),
-                            lojas_info: expItems.map(i => lojas.find(l => l.id === i.loja_id)?.nome || 'N/A').join(', '),
+                            lojas_info: expItems.map(i => {
+                                const loja = lojas.find(l => l.id === i.loja_id);
+                                return loja ? `${loja.nome} (${loja.codigo || 'S/C'})` : 'N/A';
+                            }).join(', '),
                             doca_nome: doca?.nome || 'N/A', doca_id: doca?.id || null
                         };
                     });
 
                 if (expeditionsWithItems.length > 0) {
-                    activeExpedition = expeditionsWithItems[0]; // Armazena a expedição ativa
+                    activeExpedition = expeditionsWithItems[0];
                     renderExpedicoesMotorista(expeditionsWithItems, placa);
                 } else {
-                    activeExpedition = null; // Limpa se não houver viagem
+                    activeExpedition = null;
                     mostrarSemViagemAtiva();
                 }
 
